@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <UserSecretsId>38b5d9ce-4dbc-47b9-b36e-ca45292e0055</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Humanizer" Version="2.6.2" />
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.HttpsPolicy" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
+    <PackageReference Include="System.Management.Automation_PowerShell_3.0" Version="6.3.9600.17400" />
+    <PackageReference Include="System.Reactive" Version="4.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="XpandPosh.Cmdlets">
+      <HintPath>..\..\..\..\..\..\Work\eXpandFramework\XpandPosh\XpandPosh\Cmdlets\bin\XpandPosh.Cmdlets.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
