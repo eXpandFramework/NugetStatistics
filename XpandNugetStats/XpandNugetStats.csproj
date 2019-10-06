@@ -6,17 +6,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Fasterflect.Xpand" Version="2.0.6" />
     <PackageReference Include="Humanizer" Version="2.6.2" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.HttpsPolicy" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
-    <PackageReference Include="System.Management.Automation_PowerShell_3.0" Version="6.3.9600.17400" />
+    <PackageReference Include="System.Management.Automation.dll" Version="10.0.10586" />
     <PackageReference Include="System.Reactive" Version="4.1.5" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="XpandPosh.Cmdlets">
-      <HintPath>..\..\..\..\..\..\Work\eXpandFramework\XpandPosh\XpandPosh\Cmdlets\bin\XpandPosh.Cmdlets.dll</HintPath>
+    <Reference Include="XpandPwsh.Cmdlets">
+      <HintPath>..\..\XpandPwsh\XpandPwsh\Cmdlets\bin\XpandPwsh.Cmdlets.dll</HintPath>
     </Reference>
   </ItemGroup>
 

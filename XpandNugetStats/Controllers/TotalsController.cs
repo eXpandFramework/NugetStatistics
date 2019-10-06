@@ -4,12 +4,13 @@ using System.Management.Automation;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fasterflect;
 using Humanizer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
-using WebApplication3.Models;
-using XpandPosh.Cmdlets.Nuget;
+using XpandNugetStats.Models;
+using XpandPwsh.Cmdlets.Nuget;
 
 namespace XpandNugetStats.Controllers{
     [Route("api/[controller]")]
@@ -20,7 +21,8 @@ namespace XpandNugetStats.Controllers{
 
         static TotalsController(){
             Packages = FindXpandNugetPackage.GetPackages(XpandPackageSource.Xpand,
-                    "https://xpandnugetserver.azurewebsites.net/nuget", null,XpandPackageFilter.All).Replay().RefCount().ToEnumerable().ToArray();
+                    "https://xpandnugetserver.azurewebsites.net/nuget", null,XpandPackageFilter.All).Replay().RefCount()
+                .ToEnumerable().Select(o => o.BaseObject.GetPropertyValue("Id").ToString()).ToArray();
         }
         public TotalsController(IMemoryCache memoryCache){
             _memoryCache = memoryCache;

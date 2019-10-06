@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
-using Humanizer;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using XpandPosh.Cmdlets.Nuget.GetNugetPackageSearchMetadata;
+using WebApplication3;
+using XpandPwsh.Cmdlets.Nuget.GetNugetPackageSearchMetadata;
 
-namespace WebApplication3
+namespace XpandNugetStats
 {
     public class Program
     {

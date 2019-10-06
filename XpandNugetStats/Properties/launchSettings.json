@@ -12,7 +12,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "api/totals/latest?id=eXpand",
+      "launchUrl": "api/totals/version?id=eXpand&version=19.1.602",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
