@@ -3,7 +3,6 @@ using System.IO;
 using System.Reflection;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using WebApplication3;
 using XpandPwsh.Cmdlets.Nuget.GetNugetPackageSearchMetadata;
 
 namespace XpandNugetStats

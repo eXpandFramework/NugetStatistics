@@ -2,42 +2,43 @@
 using System.Linq;
 using System.Management.Automation;
 using System.Reactive.Linq;
-using System.Threading;
+using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using Fasterflect;
 using Humanizer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Primitives;
 using XpandNugetStats.Models;
 using XpandPwsh.Cmdlets.Nuget;
 
 namespace XpandNugetStats.Controllers{
+    public class NugetPackage{
+        public string Id{ get; set; }
+        public string Version{ get; set; }
+    }
     [Route("api/[controller]")]
     [ApiController]
     public class TotalsController : ControllerBase{
-        private readonly IMemoryCache _memoryCache;
-        private static readonly string[] Packages;
+        private static readonly int _absoluteExpirationRelativeToNow=15;
+        static readonly Func<int,TimeSpan> Time=i => TimeSpan.FromMinutes(i);
 
-        static TotalsController(){
-            Packages = FindXpandNugetPackage.GetPackages(XpandPackageSource.Xpand,
-                    "https://xpandnugetserver.azurewebsites.net/nuget", null,XpandPackageFilter.All).Replay().RefCount()
-                .ToEnumerable().Select(o => o.BaseObject.GetPropertyValue("Id").ToString()).ToArray();
-        }
+        private readonly IMemoryCache _memoryCache;
+
         public TotalsController(IMemoryCache memoryCache){
             _memoryCache = memoryCache;
         }
 
-        private async Task<Shields> UpdateDownloads(string id,bool latest=false,Version version=null){
-            var packages = Packages.Where(package => Match(package,id));
-            var downloads = await GetNugetPackageDownloadsCount.Downloads(packages,latest,version);
-            var cacheEntryOptions = new MemoryCacheEntryOptions();
-            cacheEntryOptions.RegisterPostEvictionCallback(async (key, o, reason, state) => await UpdateDownloads(id,latest,version));
-            cacheEntryOptions.AddExpirationToken(
-                new CancellationChangeToken(new CancellationTokenSource(TimeSpan.FromMinutes(10)).Token));
-            var shields = new Shields{Message = downloads.ToMetric(false, true, 1)};
-            _memoryCache.Set($"{id}|{latest}|{version}", shields, cacheEntryOptions);
-            return shields;
+        [HttpGet("packages")]
+        public  Task<NugetPackage[]> Packages(XpandPackageSource packageSource=XpandPackageSource.Xpand){
+            return _memoryCache.GetOrCreate($"{nameof(Packages)}{packageSource}",entry => Observable.Return(FindXpandNugetPackage.GetPackages(packageSource, 
+                            "https://xpandnugetserver.azurewebsites.net/nuget", "https://api.nuget.org/v3/index.json", XpandPackageFilter.All)
+                    .Select(o => new NugetPackage {
+                        Id = o.BaseObject.GetPropertyValue("Id").ToString(),
+                        Version = o.BaseObject.GetPropertyValue("Version").ToString()
+                    })
+                    .ToEnumerable().ToArray())
+                ,  _absoluteExpirationRelativeToNow, Time)
+                .ToTask();
         }
 
         private bool Match(string package, string id){
@@ -59,12 +60,23 @@ namespace XpandNugetStats.Controllers{
             return await GetShields(id,true);
         }
 
-        private async Task<Shields> GetShields(string id,bool latest=false,Version version=null){
-            return await _memoryCache.GetOrCreateAsync($"{id}|{latest}|{version}", async entry => {
-                var updateDownloads = await UpdateDownloads(id,latest,version);
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
-                return updateDownloads;
-            });
+        [HttpGet("clearcache")] 
+        public ActionResult ClearCache(string id){
+            _memoryCache.ClearCache();
+            return Ok();
+        }
+
+        private  Task<Shields> GetShields(string id,bool latest=false,Version version=null){
+            
+            return _memoryCache.GetOrCreate($"{id}|{latest}|{version}",  entry => {
+                return Observable.Defer(() => {
+                    var packages = Packages().ToObservable()
+                        .SelectMany(_ => _.Select(package => package.Id)).Where(package => Match(package, id)).ToEnumerable().ToArray();
+                    return GetNugetPackageDownloadsCount.Downloads(packages, latest, version)
+                        .Select(i => new Shields{Message = i.ToMetric(false, true, 1)});
+
+                });
+            },  _absoluteExpirationRelativeToNow, Time).ToTask();
         }
 
         [HttpGet("{id}")]
