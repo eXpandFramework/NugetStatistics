@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 
-namespace XpandNugetStats.Controllers{
-    public static class Extensions{
+namespace XpandNugetStats{
+    public static class MemoryCacheExtensions{
         private static readonly ConcurrentDictionary<IMemoryCache, ConcurrentDictionary<string, CancellationTokenSource>> Memories =
                 new ConcurrentDictionary<IMemoryCache, ConcurrentDictionary<string, CancellationTokenSource>>();
 
@@ -38,10 +38,12 @@ namespace XpandNugetStats.Controllers{
 
         private static async Task<T> CacheItem<T>(this ICacheEntry cacheEntry, IMemoryCache memoryCache, string key,
             IObservable<T> factory, int timeout, Func<int, TimeSpan> time = null){
-            time = time ?? (i => TimeSpan.FromMinutes(i));
+            time ??= (i => TimeSpan.FromMinutes(i));
             cacheEntry.AbsoluteExpirationRelativeToNow = time(timeout);
             var result = await factory;
+
             var cacheEntryOptions = new MemoryCacheEntryOptions();
+            memoryCache.Set(key, result, cacheEntryOptions);
             cacheEntryOptions.RegisterPostEvictionCallback(async (keyArg, o, reason, state) =>
                 await cacheEntry.CacheItem(memoryCache, key, factory, timeout, time));
             var tokenSources = Memories.GetOrAdd(memoryCache, cache => new ConcurrentDictionary<string, CancellationTokenSource>());
@@ -50,10 +52,9 @@ namespace XpandNugetStats.Controllers{
             tokenSources.AddOrUpdate(key, s => tokenSource, (s, source) => tokenSource );
             cacheEntryOptions.AddExpirationToken(expirationToken);
             
-            memoryCache.Set(key, result, cacheEntryOptions);
+            
 
             return result;
         }
-
     }
 }

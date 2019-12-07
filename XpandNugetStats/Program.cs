@@ -1,28 +1,33 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using XpandPwsh.Cmdlets.Nuget.GetNugetPackageSearchMetadata;
+using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureKeyVault;
+using Microsoft.Extensions.Hosting;
 
-namespace XpandNugetStats
-{
-    public class Program
-    {
+namespace XpandNugetStats{
+    public class Program{
         public static void Main(string[] args){
-            
-            AppDomain.CurrentDomain.AssemblyResolve+=CurrentDomainOnAssemblyResolve;
-            CreateWebHostBuilder(args).Build().Run();
+            CreateHostBuilder(args).Build().Run();
         }
-        private static Assembly CurrentDomainOnAssemblyResolve(object sender, ResolveEventArgs args){
-            if (args.Name.Contains("Newton")){
-                return Assembly.LoadFile(
-                    $@"{Path.GetDirectoryName(typeof(GetNugetPackageSearchMetadata).Assembly.Location)}\Newtonsoft.Json.dll");
-            }
-            return null;
+
+        public static IHostBuilder CreateHostBuilder(string[] args){
+            return Host.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((context, config) => {
+                    var keyVaultEndpoint = GetKeyVaultEndpoint();
+                    if (!string.IsNullOrEmpty(keyVaultEndpoint)){
+                        var azureServiceTokenProvider = new AzureServiceTokenProvider();
+                        var keyVaultClient = new KeyVaultClient(
+                            new KeyVaultClient.AuthenticationCallback(
+                                azureServiceTokenProvider.KeyVaultTokenCallback));
+                        config.AddAzureKeyVault(keyVaultEndpoint, keyVaultClient, new DefaultKeyVaultSecretManager());
+                    }
+                })
+                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
         }
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>();
+
+        private static string GetKeyVaultEndpoint(){
+            return "https://xpandAppSecrets.vault.azure.net";
+        }
     }
 }
