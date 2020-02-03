@@ -19,6 +19,7 @@ using XpandNugetStats.Models;
 using XpandPwsh.Cmdlets.Nuget;
 
 namespace XpandNugetStats.Controllers{
+    
     [Route("api/[controller]")]
     [ApiController]
     public class TotalsController : ControllerBase{
@@ -27,7 +28,7 @@ namespace XpandNugetStats.Controllers{
         readonly Dictionary<string,int> _definitions=new Dictionary<string, int>(){{"build",BuildPipelineId},{"coverage",TestPipelineId},{"tests",BuildPipelineId}};
         private const string NugetFeed = "https://api.nuget.org/v3/index.json";
         private const string XpandFeed = "https://xpandnugetserver.azurewebsites.net/nuget";
-        private const int AbsoluteExpirationRelativeToNow = 15;
+        private const int AbsoluteExpirationRelativeToNow = 150;
         static readonly Func<int,TimeSpan> Time=i => TimeSpan.FromMinutes(i);
 
         private readonly IMemoryCache _memoryCache;
