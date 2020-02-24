@@ -36,7 +36,6 @@ namespace XpandNugetStats{
             var tokenSource = new CancellationTokenSource(time(timeout-5));
             TokenSources.TryAdd(key, tokenSource);
             var expirationToken = new CancellationChangeToken(tokenSource.Token);
-            cacheEntry.SlidingExpiration=time(timeout);
             cacheEntry.ExpirationTokens.Add(expirationToken);
             cacheEntry.PostEvictionCallbacks.Add(new PostEvictionCallbackRegistration(){EvictionCallback =
                 (o, value, reason, state) => {
