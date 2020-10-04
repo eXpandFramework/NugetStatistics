@@ -42,11 +42,10 @@ namespace XpandNugetStats.Controllers{
         }
 
         [HttpGet("LatestXAFMinors")]
-        public Task<Shields> LatestXAFMinors(int index){
-            var xafBuild =  XAFBuild(index, "master", "tests").ToObservable();
-            return  LatestXAFMinorsCore(index)
+        public async Task<Shields> LatestXAFMinors(int index){
+            return await  LatestXAFMinorsCore(index)
                 .ToShields("Version")
-                .Zip(xafBuild, (minor, build) => {
+                .Zip(XAFBuild(index, "master", "tests").ToObservable(), (minor, build) => {
                     minor.Color = build.Color;
                     return minor;
                 })
@@ -66,6 +65,9 @@ namespace XpandNugetStats.Controllers{
 
         [HttpGet("XAFBuild")]
         public  Task<Shields> XAFBuild(int index,string branch,string shield){
+            // index = 2;
+            // branch = "master";
+            // shield = "tests";
             shield = shield.ToLower();
             var latestXAFMinorsCore = LatestXAFMinorsCore(index);
             return _memoryCache.GetOrCreate($"{nameof(XAFBuild)}{index}{branch}{shield}", entry => {
@@ -99,11 +101,11 @@ namespace XpandNugetStats.Controllers{
             }
             else if (shield == "coverage"){
                 var coverage = int.Parse(shields.Message.Replace("%", ""));
+                if (coverage < 50){
+                    return "Red";
+                }
                 if (coverage < 70){
                     return "Yellow";
-                }
-                else if (coverage < 50){
-                    return "Red";
                 }
             }
             else{
@@ -117,26 +119,23 @@ namespace XpandNugetStats.Controllers{
 
         private IObservable<object> Tests(string branch, BuildHttpClient buildHttpClient, TeamProjectReference project,Version latestXAFMinor, Build build){
             return GetBuilds(branch, buildHttpClient, project, TestPipelineId, latestXAFMinor)
+                .SelectMany(list => list)
                 .FirstOrDefaultAsync(_ => {
-                    return _.Any(build1 => {
-                        var deserializeObject = JsonConvert.DeserializeObject<dynamic>(build1.Parameters);
-                        var dxPipelineBuildId = deserializeObject.DxPipelineBuildId;
-                        return dxPipelineBuildId == build.Id;
-                    });
+                    var deserializeObject = JsonConvert.DeserializeObject<dynamic>(_.Parameters);
+                    var dxPipelineBuildId = deserializeObject.DxPipelineBuildId;
+                    return dxPipelineBuildId == build.Id;
                 })
                 .SelectMany(_ => {
                     if (_ == null){
                         return Observable.Return("Build=Failed");
                     }
 
-                    return _.ToObservable().SelectMany(build1 => {
-                        var client = _connection.GetClient<TestResultsHttpClient>();
-                        return client.GetTestRunsAsync(project.Id, build1.Uri.ToString()).ToObservable()
-                            .Select(runs =>
-                                (Passed: runs.Sum(run => run.PassedTests),
-                                    Failed: runs.Sum(run => run.UnanalyzedTests)))
-                            .Select(tuple => $"Passed: {tuple.Passed}, Failed: {tuple.Failed}");
-                    });
+                    var client = _connection.GetClient<TestResultsHttpClient>();
+                    return client.GetTestRunsAsync(project.Id, _.Uri.ToString()).ToObservable()
+                        .Select(runs =>
+                            (Passed: runs.Sum(run => run.PassedTests),
+                                Failed: runs.Sum(run => run.UnanalyzedTests)))
+                        .Select(tuple => $"Passed: {tuple.Passed}, Failed: {tuple.Failed}");
 
                 });
         }
@@ -144,7 +143,7 @@ namespace XpandNugetStats.Controllers{
         private static IObservable<List<Build>> GetBuilds(string branch, BuildHttpClient buildHttpClient,
             TeamProjectReference project, int definitionId, Version latestXAFMinor, int? top=null){
             return buildHttpClient
-                .GetBuildsAsync(project.Id, new[]{definitionId}, tagFilters: new[]{$"{latestXAFMinor}"},branchName:$"refs/heads/{branch}",top:top)
+                .GetBuildsAsync(project.Id, new[]{definitionId}, tagFilters: new[]{$"{latestXAFMinor}"},branchName:$"refs/heads/{branch}",top:top,statusFilter:BuildStatus.Completed)
                 .ToObservable();
         }
 
@@ -161,8 +160,8 @@ namespace XpandNugetStats.Controllers{
         [HttpGet("packages")]
         public  Task<NugetPackage[]> Packages(XpandPackageSource packageSource=XpandPackageSource.Xpand){
             
-            return _memoryCache.GetOrCreate($"{nameof(Packages)}{packageSource}",entry => Observable.Return(FindXpandNugetPackage.GetPackages(packageSource, 
-                            XpandFeed, NugetFeed, XpandPackageFilter.All)
+            return _memoryCache.GetOrCreate($"{nameof(Packages)}{packageSource}",
+                    entry => Observable.Return(FindXpandNugetPackage.GetPackages(packageSource, XpandFeed, NugetFeed, XpandPackageFilter.All)
                     .Select(o => new NugetPackage {
                         Id = o.BaseObject.GetPropertyValue("Id").ToString(),
                         Version = o.BaseObject.GetPropertyValue("Version").ToString()
@@ -193,8 +192,8 @@ namespace XpandNugetStats.Controllers{
 
         [HttpGet("clearcache")] 
         public ActionResult ClearCache(){
-            _memoryCache.ClearCache();
-            return Ok();
+            
+            return Content(string.Join(",",_memoryCache.ClearCache()));
         }
 
         private  Task<Shields> GetShields(string id,bool latest=false,Version version=null){

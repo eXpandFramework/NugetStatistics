@@ -12,7 +12,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "api/totals/XAFBuild?Index=3&branch=lab&shield=tests",
+      "launchUrl": "api/totals/XAFBuild?index=2",
       "environmentVariables": {
         "ASPNETCORE_HOSTINGSTARTUP__KEYVAULT__CONFIGURATIONENABLED": "true",
         "ASPNETCORE_ENVIRONMENT": "Development",

@@ -20,12 +20,15 @@ namespace XpandNugetStats{
                 async entry => await entry.CacheItem(memoryCache, key, Observable.Defer(() => factory(entry)), timeout, time)));
         }
 
-        public static void ClearCache(this IMemoryCache memoryCache){
+        public static string[] ClearCache(this IMemoryCache memoryCache){
             var cancellationTokenSources = TokenSources.Values.ToArray();
+            var keys = TokenSources.Keys.ToArray();
             TokenSources.Clear();
             foreach (var tokenSource in cancellationTokenSources){
                 tokenSource.Cancel();
             }
+
+            return keys;
         }
 
         private static async Task<T> CacheItem<T>(this ICacheEntry cacheEntry, IMemoryCache memoryCache, string key,
